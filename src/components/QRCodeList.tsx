@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import QRCodeCanvas from 'qrcode.react';
 import { useState } from 'react';
 import { Download, MoreVertical, QrCode, Trash2, ExternalLink } from 'lucide-react';
+import ReactDOM from 'react-dom';
 
 interface QRCodeListProps {
   qrCodes: QRCode[];
@@ -54,7 +55,6 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
     tempContainer.appendChild(qrElement);
     
     // Use ReactDOM to render the QR code
-    const ReactDOM = require('react-dom');
     ReactDOM.render(
       <QRCodeCanvas
         value={qrCode.url}
@@ -284,6 +284,3 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
     </div>
   );
 }
-
-<lov-add-dependency>react-dom@latest</lov-add-dependency>
-<lov-add-dependency>date-fns@latest</lov-add-dependency>

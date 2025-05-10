@@ -289,6 +289,3 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
     </Card>
   );
 }
-
-// Install QR code generator library
-<lov-add-dependency>qrcode.react@latest</lov-add-dependency>
