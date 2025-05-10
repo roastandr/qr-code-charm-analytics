@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -50,6 +49,7 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
   // Generate preview QR code
   React.useEffect(() => {
     if (targetUrl.startsWith('http')) {
+      // For preview purposes, just show the original URL
       setPreviewUrl(targetUrl);
     }
   }, [targetUrl]);
@@ -65,9 +65,17 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
         background_color: values.background_color
       });
       
+      const shortUrl = `${window.location.origin}/r/${newQRLink.slug}`;
       toast({
         title: "QR Code Created!",
-        description: `Your QR code "${values.name}" has been created successfully.`,
+        description: (
+          <div className="space-y-2">
+            <p>Your QR code "{values.name}" has been created successfully.</p>
+            <p className="text-xs font-mono bg-muted p-1 rounded">
+              Trackable URL: {shortUrl}
+            </p>
+          </div>
+        ),
       });
       
       if (onSuccess) {
