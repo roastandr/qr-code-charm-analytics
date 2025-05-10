@@ -22,6 +22,14 @@ export interface QRCode {
   expiresAt?: string;
   slug?: string;
   target_url?: string;
+
+  // Database field mappings
+  user_id?: string; 
+  created_at?: string;
+  updated_at?: string;
+  background_color?: string;
+  is_active?: boolean;
+  expires_at?: string;
 }
 
 export interface ScanEvent {

@@ -19,9 +19,10 @@ interface QRCodeListProps {
   qrCodes: QRCode[];
   onSelect: (qrCode: QRCode) => void;
   onDelete: (id: string) => void;
+  selectedId?: string;
 }
 
-export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
+export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeListProps) {
   const [qrToPreview, setQrToPreview] = useState<QRCode | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [qrToDelete, setQrToDelete] = useState<string | null>(null);
@@ -57,10 +58,10 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
     // Use ReactDOM to render the QR code
     ReactDOM.render(
       <QRCodeCanvas
-        value={qrCode.url}
+        value={qrCode.url || qrCode.target_url || ''}
         size={qrCode.size || 300}
         fgColor={qrCode.color || '#000000'}
-        bgColor={qrCode.backgroundColor || '#FFFFFF'}
+        bgColor={qrCode.backgroundColor || qrCode.background_color || '#FFFFFF'}
         level="H"
         includeMargin
       />,
@@ -129,10 +130,10 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
               {/* QR Code Preview */}
               <div className="w-full sm:w-[140px] h-[140px] p-4 flex items-center justify-center bg-secondary/30">
                 <QRCodeCanvas 
-                  value={qrCode.url} 
+                  value={qrCode.url || qrCode.target_url || ''} 
                   size={100} 
                   fgColor={qrCode.color || '#000000'}
-                  bgColor={qrCode.backgroundColor || '#FFFFFF'}
+                  bgColor={qrCode.backgroundColor || qrCode.background_color || '#FFFFFF'}
                 />
               </div>
               
@@ -155,7 +156,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
                         <DropdownMenuItem onClick={() => handlePreview(qrCode)}>
                           Preview QR Code
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.open(qrCode.url, '_blank')}>
+                        <DropdownMenuItem onClick={() => window.open(qrCode.url || qrCode.target_url || '', '_blank')}>
                           Open URL
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => downloadQRCode(qrCode, 'png')}>
@@ -175,14 +176,14 @@ export function QRCodeList({ qrCodes, onSelect, onDelete }: QRCodeListProps) {
                   </div>
                   
                   <p className="text-sm text-muted-foreground mt-1 break-all">
-                    {qrCode.url}
+                    {qrCode.url || qrCode.target_url}
                   </p>
                 </div>
                 
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center">
                     <div className="text-sm text-muted-foreground">
-                      {qrCode.totalScans} scans · Created {formatDistanceToNow(new Date(qrCode.createdAt))} ago
+                      {qrCode.totalScans} scans · Created {formatDistanceToNow(new Date(qrCode.createdAt || qrCode.created_at || ''))} ago
                     </div>
                   </div>
                   

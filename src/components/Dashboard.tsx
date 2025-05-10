@@ -125,7 +125,7 @@ export function Dashboard() {
                 </div>
               ) : (
                 <QRCodeList 
-                  qrLinks={qrLinks} 
+                  qrCodes={qrLinks} 
                   onSelect={handleQRLinkSelected}
                   onDelete={handleQRLinkDeleted}
                   selectedId={selectedQrLink?.id}
@@ -137,7 +137,7 @@ export function Dashboard() {
         
         <TabsContent value="stats">
           {selectedQrLink && (
-            <QRCodeStats qrLink={selectedQrLink} />
+            <QRCodeStats qrCode={selectedQrLink} />
           )}
         </TabsContent>
         

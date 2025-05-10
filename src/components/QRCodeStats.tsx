@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { QRCode, QRCodeStats as QRStats } from '@/types';
 import { qrService } from '@/services/qr-service';
