@@ -1,180 +1,148 @@
 
 import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { QRLinkCreator } from "@/components/QRLinkCreator";
+import { QRCodeList } from "@/components/QRCodeList";
+import { QRCodeStats } from '@/components/QRCodeStats';
 import { useAuth } from '@/hooks/use-auth';
 import { qrService } from '@/services/qr-service';
 import { QRCode } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { QRCodeList } from './QRCodeList';
-import { QRCodeStats } from './QRCodeStats';
-import { QRCodeGenerator } from './QRCodeGenerator';
-import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, QrCode } from 'lucide-react';
+import { Loader2, PlusCircle, BarChart3 } from 'lucide-react';
 
 export function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [qrCodes, setQRCodes] = useState<QRCode[]>([]);
+  const [qrLinks, setQrLinks] = useState<QRCode[]>([]);
+  const [selectedQrLink, setSelectedQrLink] = useState<QRCode | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("qrcodes");
-  const [selectedQRCode, setSelectedQRCode] = useState<QRCode | null>(null);
-
-  useEffect(() => {
-    if (user) {
-      loadQRCodes();
-    }
-  }, [user]);
-
-  const loadQRCodes = async () => {
-    if (!user) return;
-    
+  const [activeTab, setActiveTab] = useState('my-codes');
+  
+  const loadQRLinks = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const codes = await qrService.getQRCodes(user.id);
-      setQRCodes(codes);
+      const data = await qrService.getQRLinks();
+      setQrLinks(data);
+      // If there are QR codes and none is selected, select the first one
+      if (data.length > 0 && !selectedQrLink) {
+        setSelectedQrLink(data[0]);
+      }
     } catch (error) {
-      console.error('Failed to load QR codes:', error);
+      console.error('Error loading QR links:', error);
       toast({
-        title: "Failed to load QR codes",
-        description: "There was a problem loading your QR codes. Please refresh the page.",
-        variant: "destructive",
+        title: "Error Loading QR Codes",
+        description: "There was a problem loading your QR codes. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
-  const handleQRGenerated = () => {
-    loadQRCodes();
+  
+  useEffect(() => {
+    if (user) {
+      loadQRLinks();
+    }
+  }, [user]);
+  
+  const handleQRLinkCreated = (newQRLink: QRCode) => {
+    setQrLinks(prev => [newQRLink, ...prev]);
+    setSelectedQrLink(newQRLink);
+    setActiveTab('my-codes');
   };
-
-  const handleQRCodeSelect = (qrCode: QRCode) => {
-    setSelectedQRCode(qrCode);
-    setActiveTab('stats');
-  };
-
-  const handleCreateNew = () => {
-    setSelectedQRCode(null);
-    setActiveTab('create');
-  };
-
-  const handleBackToList = () => {
-    setSelectedQRCode(null);
-    setActiveTab('qrcodes');
-  };
-
-  const handleDeleteQRCode = async (id: string) => {
-    try {
-      await qrService.deleteQRCode(id);
-      
-      if (selectedQRCode?.id === id) {
-        setSelectedQRCode(null);
-        setActiveTab('qrcodes');
-      }
-      
-      setQRCodes(qrCodes.filter(qr => qr.id !== id));
-      
-      toast({
-        title: "QR Code Deleted",
-        description: "The QR code has been successfully deleted.",
-      });
-    } catch (error) {
-      console.error('Failed to delete QR code:', error);
-      toast({
-        title: "Failed to Delete",
-        description: "There was a problem deleting the QR code.",
-        variant: "destructive",
-      });
+  
+  const handleQRLinkDeleted = (id: string) => {
+    setQrLinks(prev => prev.filter(qr => qr.id !== id));
+    if (selectedQrLink && selectedQrLink.id === id) {
+      setSelectedQrLink(qrLinks.length > 1 ? qrLinks.find(qr => qr.id !== id) || null : null);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Authentication Required</CardTitle>
-            <CardDescription>
-              Please sign in or create an account to access the dashboard.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
+  
+  const handleQRLinkSelected = (qrLink: QRCode) => {
+    setSelectedQrLink(qrLink);
+    setActiveTab('stats');
+  };
+  
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+    <div className="container max-w-6xl mx-auto px-4">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">QR Code Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track your QR codes
-          </p>
+          <h1 className="text-3xl font-bold">Welcome, {user?.email}</h1>
+          <p className="text-muted-foreground">Manage and track your QR codes</p>
         </div>
-        
-        <div className="mt-4 md:mt-0">
-          <Button onClick={handleCreateNew} className="gap-2">
-            <Plus className="h-4 w-4" /> Create New QR Code
-          </Button>
-        </div>
+        <Button onClick={() => setActiveTab('create')} className="gap-2">
+          <PlusCircle className="h-4 w-4" />
+          Create New QR
+        </Button>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-8">
-          <TabsTrigger value="qrcodes">My QR Codes</TabsTrigger>
-          <TabsTrigger value="stats" disabled={!selectedQRCode}>
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="create">Create New</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="my-codes" className="gap-2">
+              My QR Codes
+              {qrLinks.length > 0 && <span className="ml-1 bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center text-xs">{qrLinks.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="gap-2" disabled={!selectedQrLink}>
+              <BarChart3 className="h-4 w-4" />
+              Statistics
+            </TabsTrigger>
+            <TabsTrigger value="create" className="gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Create New
+            </TabsTrigger>
+          </TabsList>
+        </div>
         
-        <TabsContent value="qrcodes">
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-              <Skeleton className="h-[120px] w-full rounded-lg" />
-            </div>
-          ) : qrCodes.length > 0 ? (
-            <QRCodeList 
-              qrCodes={qrCodes} 
-              onSelect={handleQRCodeSelect} 
-              onDelete={handleDeleteQRCode}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <QrCode className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">No QR Codes Yet</h3>
-              <p className="text-muted-foreground max-w-sm mb-6">
-                You haven't created any QR codes yet. Get started by creating your first QR code.
-              </p>
-              <Button onClick={() => setActiveTab('create')}>
-                Create Your First QR Code
-              </Button>
-            </div>
-          )}
+        <TabsContent value="my-codes">
+          <Card>
+            <CardHeader>
+              <CardTitle>My QR Codes</CardTitle>
+              <CardDescription>
+                View, edit and track your QR codes
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : qrLinks.length === 0 ? (
+                <div className="text-center py-12">
+                  <h3 className="text-lg font-medium mb-2">No QR Codes Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first trackable QR code to start monitoring its performance.
+                  </p>
+                  <Button onClick={() => setActiveTab('create')}>Create Your First QR Code</Button>
+                </div>
+              ) : (
+                <QRCodeList 
+                  qrLinks={qrLinks} 
+                  onSelect={handleQRLinkSelected}
+                  onDelete={handleQRLinkDeleted}
+                  selectedId={selectedQrLink?.id}
+                />
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="stats">
-          {selectedQRCode && (
-            <>
-              <Button 
-                variant="ghost" 
-                onClick={handleBackToList}
-                className="mb-4"
-              >
-                ← Back to QR Codes
-              </Button>
-              <QRCodeStats qrCode={selectedQRCode} />
-            </>
+          {selectedQrLink && (
+            <QRCodeStats qrLink={selectedQrLink} />
           )}
         </TabsContent>
         
         <TabsContent value="create">
-          <QRCodeGenerator onQRGenerated={handleQRGenerated} />
+          <QRLinkCreator onSuccess={handleQRLinkCreated} />
         </TabsContent>
       </Tabs>
     </div>

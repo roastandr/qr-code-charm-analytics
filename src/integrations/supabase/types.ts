@@ -9,13 +9,154 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      qr_links: {
+        Row: {
+          background_color: string | null
+          color: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          target_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          background_color?: string | null
+          color?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          target_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          background_color?: string | null
+          color?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          target_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scans: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          latitude: number | null
+          longitude: number | null
+          os: string | null
+          qr_link_id: string
+          referrer: string | null
+          timestamp: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          os?: string | null
+          qr_link_id: string
+          referrer?: string | null
+          timestamp?: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          os?: string | null
+          qr_link_id?: string
+          referrer?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scans_qr_link_id_fkey"
+            columns: ["qr_link_id"]
+            isOneToOne: false
+            referencedRelation: "qr_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_qr_link_by_slug: {
+        Args: { slug_param: string }
+        Returns: {
+          id: string
+          target_url: string
+          is_active: boolean
+          expires_at: string
+        }[]
+      }
+      record_scan: {
+        Args: {
+          qr_link_id_param: string
+          ip_address_param?: string
+          country_param?: string
+          city_param?: string
+          latitude_param?: number
+          longitude_param?: number
+          device_type_param?: string
+          browser_param?: string
+          os_param?: string
+          referrer_param?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

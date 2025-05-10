@@ -1,172 +1,131 @@
 
-import { QRCode, QRCodeStats, ScanEvent } from '../types';
-
-// Mock QR code database (would be replaced with real backend)
-let qrCodes: QRCode[] = [];
-let scanEvents: ScanEvent[] = [];
-
-// Generate mock data for demo purposes
-const initializeMockData = (userId: string) => {
-  if (qrCodes.length === 0) {
-    const mockQRData = [
-      {
-        id: 'qr-1',
-        userId,
-        name: 'Company Website',
-        url: 'https://example.com',
-        shortUrl: 'https://qr.ly/abc123',
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-        updatedAt: new Date().toISOString(),
-        color: '#8B5CF6', // Purple color
-        backgroundColor: '#FFFFFF',
-        size: 300,
-        totalScans: 128,
-        isActive: true,
-      },
-      {
-        id: 'qr-2',
-        userId,
-        name: 'Product Page',
-        url: 'https://example.com/product',
-        shortUrl: 'https://qr.ly/def456',
-        createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
-        updatedAt: new Date().toISOString(),
-        color: '#6E59A5', // Dark purple
-        backgroundColor: '#FFFFFF',
-        size: 300,
-        totalScans: 75,
-        isActive: true,
-      },
-      {
-        id: 'qr-3',
-        userId,
-        name: 'Special Offer',
-        url: 'https://example.com/offer',
-        shortUrl: 'https://qr.ly/ghi789',
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-        updatedAt: new Date().toISOString(),
-        color: '#8B5CF6',
-        backgroundColor: '#F3F4F6',
-        size: 300,
-        totalScans: 42,
-        isActive: true,
-        expiresAt: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(), // 25 days from now
-      },
-    ];
-    
-    qrCodes = mockQRData as QRCode[];
-    
-    // Generate mock scan events
-    qrCodes.forEach(qr => {
-      for (let i = 0; i < qr.totalScans; i++) {
-        const daysAgo = Math.floor(Math.random() * 30);
-        const eventTime = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000 - Math.random() * 24 * 60 * 60 * 1000);
-        
-        scanEvents.push({
-          id: `scan-${qr.id}-${i}`,
-          qrCodeId: qr.id,
-          timestamp: eventTime.toISOString(),
-          location: {
-            country: ['United States', 'Canada', 'United Kingdom', 'Germany', 'France'][Math.floor(Math.random() * 5)],
-            city: ['New York', 'Los Angeles', 'Toronto', 'London', 'Berlin', 'Paris'][Math.floor(Math.random() * 6)],
-          },
-          device: {
-            type: ['mobile', 'desktop', 'tablet', 'unknown'][Math.floor(Math.random() * 3)] as 'mobile' | 'desktop' | 'tablet' | 'unknown',
-            browser: ['Chrome', 'Safari', 'Firefox', 'Edge'][Math.floor(Math.random() * 4)],
-            os: ['iOS', 'Android', 'Windows', 'MacOS'][Math.floor(Math.random() * 4)]
-          }
-        });
-      }
-    });
-  }
-};
+import { supabase } from "@/integrations/supabase/client";
+import { QRCode, QRCodeStats, ScanEvent } from '@/types';
+import { nanoid } from 'nanoid';
 
 export const qrService = {
-  getQRCodes: async (userId: string): Promise<QRCode[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    initializeMockData(userId);
-    return qrCodes.filter(qr => qr.userId === userId);
-  },
-  
-  getQRCode: async (id: string): Promise<QRCode | undefined> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return qrCodes.find(qr => qr.id === id);
-  },
-  
-  createQRCode: async (userId: string, qrData: Partial<QRCode>): Promise<QRCode> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const newQRCode: QRCode = {
-      id: 'qr-' + Math.random().toString(36).substr(2, 9),
-      userId,
-      name: qrData.name || 'Untitled QR Code',
-      url: qrData.url || '',
-      shortUrl: `https://qr.ly/${Math.random().toString(36).substr(2, 6)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      color: qrData.color || '#8B5CF6',
-      backgroundColor: qrData.backgroundColor || '#FFFFFF',
-      size: qrData.size || 300,
-      totalScans: 0,
-      isActive: true,
-      expiresAt: qrData.expiresAt,
-    };
-    
-    qrCodes.push(newQRCode);
-    return newQRCode;
-  },
-  
-  updateQRCode: async (id: string, updates: Partial<QRCode>): Promise<QRCode> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const index = qrCodes.findIndex(qr => qr.id === id);
-    if (index === -1) {
-      throw new Error('QR code not found');
+  // Get all QR links for the current user
+  getQRLinks: async (): Promise<QRCode[]> => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) {
+      throw new Error('Not authenticated');
     }
     
-    const updatedQR = {
-      ...qrCodes[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
+    const { data, error } = await supabase
+      .from('qr_links')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching QR links:', error);
+      throw error;
+    }
     
-    qrCodes[index] = updatedQR;
-    return updatedQR;
+    return data || [];
   },
   
-  deleteQRCode: async (id: string): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    qrCodes = qrCodes.filter(qr => qr.id !== id);
-    scanEvents = scanEvents.filter(event => event.qrCodeId !== id);
+  // Get a single QR link by ID
+  getQRLink: async (id: string): Promise<QRCode> => {
+    const { data, error } = await supabase
+      .from('qr_links')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching QR link:', error);
+      throw error;
+    }
+    
+    return data;
   },
   
-  recordScan: async (qrCodeId: string, scanData: Partial<ScanEvent>): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve, 200));
+  // Create a new QR link
+  createQRLink: async (qrData: { name: string; target_url: string; slug?: string; color?: string; background_color?: string; }): Promise<QRCode> => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) {
+      throw new Error('Not authenticated');
+    }
     
-    const qrIndex = qrCodes.findIndex(qr => qr.id === qrCodeId);
-    if (qrIndex === -1) return;
+    // Generate a random slug if not provided
+    const slug = qrData.slug || nanoid(8);
     
-    // Record scan event
-    const newScan: ScanEvent = {
-      id: `scan-${Math.random().toString(36).substr(2, 9)}`,
-      qrCodeId,
-      timestamp: new Date().toISOString(),
-      ...scanData
-    };
+    const { data, error } = await supabase
+      .from('qr_links')
+      .insert([
+        { 
+          user_id: session.session.user.id,
+          name: qrData.name,
+          slug,
+          target_url: qrData.target_url,
+          color: qrData.color || '#8B5CF6',
+          background_color: qrData.background_color || '#FFFFFF'
+        }
+      ])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating QR link:', error);
+      if (error.code === '23505') { // Unique violation
+        throw new Error('This slug is already taken. Please choose another one.');
+      }
+      throw error;
+    }
     
-    scanEvents.push(newScan);
-    
-    // Update total scans count
-    qrCodes[qrIndex].totalScans += 1;
+    return data;
   },
   
-  getQRCodeStats: async (qrCodeId: string): Promise<QRCodeStats> => {
-    await new Promise(resolve => setTimeout(resolve, 600));
+  // Update an existing QR link
+  updateQRLink: async (id: string, updates: Partial<QRCode>): Promise<QRCode> => {
+    const { data, error } = await supabase
+      .from('qr_links')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error updating QR link:', error);
+      if (error.code === '23505') { // Unique violation
+        throw new Error('This slug is already taken. Please choose another one.');
+      }
+      throw error;
+    }
     
-    const qrScans = scanEvents.filter(scan => scan.qrCodeId === qrCodeId);
+    return data;
+  },
+  
+  // Delete a QR link
+  deleteQRLink: async (id: string): Promise<void> => {
+    const { error } = await supabase
+      .from('qr_links')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      console.error('Error deleting QR link:', error);
+      throw error;
+    }
+  },
+  
+  // Get statistics for a QR link
+  getQRLinkStats: async (id: string): Promise<QRCodeStats> => {
+    const { data: scans, error } = await supabase
+      .from('scans')
+      .select('*')
+      .eq('qr_link_id', id);
+      
+    if (error) {
+      console.error('Error fetching QR link scans:', error);
+      throw error;
+    }
     
     // Process data for stats
-    const totalScans = qrScans.length;
+    const totalScans = scans.length;
     
     // Daily scans for the last 30 days
     const dailyScans: { date: string, count: number }[] = [];
@@ -176,7 +135,7 @@ export const qrService = {
       date.setDate(today.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const count = qrScans.filter(scan => {
+      const count = scans.filter(scan => {
         const scanDate = new Date(scan.timestamp).toISOString().split('T')[0];
         return scanDate === dateStr;
       }).length;
@@ -192,9 +151,9 @@ export const qrService = {
       unknown: 0
     };
     
-    qrScans.forEach(scan => {
-      if (scan.device?.type) {
-        deviceCounts[scan.device.type] += 1;
+    scans.forEach(scan => {
+      if (scan.device_type) {
+        deviceCounts[scan.device_type as keyof typeof deviceCounts] += 1;
       } else {
         deviceCounts.unknown += 1;
       }
@@ -202,10 +161,10 @@ export const qrService = {
     
     // Top locations
     const locationMap = new Map<string, number>();
-    qrScans.forEach(scan => {
-      if (scan.location?.country) {
-        const count = locationMap.get(scan.location.country) || 0;
-        locationMap.set(scan.location.country, count + 1);
+    scans.forEach(scan => {
+      if (scan.country) {
+        const count = locationMap.get(scan.country) || 0;
+        locationMap.set(scan.country, count + 1);
       }
     });
     
@@ -220,5 +179,23 @@ export const qrService = {
       deviceBreakdown: deviceCounts,
       topLocations
     };
+  },
+  
+  // Subscribe to real-time scan events
+  subscribeToScans: (qrLinkId: string, callback: (scan: ScanEvent) => void) => {
+    return supabase
+      .channel(`scans:${qrLinkId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'scans',
+          filter: `qr_link_id=eq.${qrLinkId}`
+        }, 
+        payload => {
+          callback(payload.new as ScanEvent);
+        }
+      )
+      .subscribe();
   }
 };

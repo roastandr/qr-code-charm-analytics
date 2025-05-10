@@ -1,55 +1,63 @@
-import { qrService } from './qr-service';
 
-// In a real app, this would connect to a backend service
+import { supabase } from "@/integrations/supabase/client";
+
+export interface TrackingResult {
+  success: boolean;
+  url?: string;
+  name?: string;
+  error?: string;
+}
+
 export const redirectService = {
   // Track a scan when QR code is accessed via short URL
-  trackAndRedirect: async (shortCode: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Get device info
-    const deviceType = detectDeviceType();
-    const browserInfo = detectBrowserInfo();
-    const osInfo = detectOSInfo();
-    
-    // In a real app, would look up QR by short code
-    // For demo, we'll just pretend shortCode maps to qr-1
-    const qrCodeId = 'qr-1';
-    
+  trackAndRedirect: async (shortCode: string): Promise<TrackingResult> => {
     try {
-      // Record the scan with device info
-      await qrService.recordScan(qrCodeId, {
-        device: {
-          type: deviceType,
-          browser: browserInfo,
-          os: osInfo
-        },
-        // In real app would use geolocation API or IP-based location
-        location: {
-          country: 'United States',
-          city: 'New York'
-        }
-      });
+      // First, get the QR link from the slug
+      const { data: qrLink, error: qrError } = await supabase
+        .rpc('get_qr_link_by_slug', { slug_param: shortCode });
       
-      // Get the QR code to find the destination URL
-      const qrCode = await qrService.getQRCode(qrCodeId);
-      
-      if (!qrCode || !qrCode.isActive) {
-        return { success: false, error: 'QR code not found or inactive' };
+      if (qrError || !qrLink || qrLink.length === 0) {
+        console.error('QR code lookup error:', qrError);
+        return { success: false, error: 'QR code not found' };
       }
       
-      if (qrCode.expiresAt && new Date(qrCode.expiresAt) < new Date()) {
+      const link = qrLink[0];
+      
+      if (!link.is_active) {
+        return { success: false, error: 'QR code is inactive' };
+      }
+      
+      if (link.expires_at && new Date(link.expires_at) < new Date()) {
         return { success: false, error: 'QR code has expired' };
       }
       
-      // Return the redirect URL
+      // Get device info
+      const deviceType = detectDeviceType();
+      const browserInfo = detectBrowserInfo();
+      const osInfo = detectOSInfo();
+      
+      // Record the scan
+      await supabase
+        .rpc('record_scan', {
+          qr_link_id_param: link.id,
+          device_type_param: deviceType,
+          browser_param: browserInfo,
+          os_param: osInfo,
+          referrer_param: document.referrer || null
+        });
+      
+      // Get the name for display purposes
+      const { data: qrDetails } = await supabase
+        .from('qr_links')
+        .select('name')
+        .eq('id', link.id)
+        .single();
+      
       return { 
         success: true, 
-        url: qrCode.url,
-        qrCodeId: qrCode.id,
-        name: qrCode.name
+        url: link.target_url,
+        name: qrDetails?.name
       };
-      
     } catch (error) {
       console.error('Error during redirect:', error);
       return { success: false, error: 'An error occurred during redirect' };

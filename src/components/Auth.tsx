@@ -41,11 +41,11 @@ export function Auth({ onSuccess }: AuthProps) {
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Authentication error:', error);
       toast({
         title: `${activeTab === 'login' ? 'Login' : 'Signup'} Failed`,
-        description: `Please check your ${activeTab === 'login' ? 'credentials' : 'information'} and try again.`,
+        description: error.message || `Please check your ${activeTab === 'login' ? 'credentials' : 'information'} and try again.`,
         variant: "destructive",
       });
     }
@@ -59,13 +59,13 @@ export function Auth({ onSuccess }: AuthProps) {
             <QrCode className="h-6 w-6 text-primary" />
           </div>
         </div>
-        <CardTitle className="text-2xl text-center gradient-text">
-          {activeTab === 'login' ? 'Welcome Back' : 'Create an Account'}
+        <CardTitle className="text-2xl text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">
+          {activeTab === 'login' ? 'Welcome to QRTrakr' : 'Create Your QRTrakr Account'}
         </CardTitle>
         <CardDescription className="text-center">
           {activeTab === 'login' 
-            ? 'Enter your credentials to access your account' 
-            : 'Sign up to start generating and tracking QR codes'}
+            ? 'Enter your credentials to access your QR codes' 
+            : 'Sign up to start generating and tracking beautiful QR codes'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -100,7 +100,7 @@ export function Auth({ onSuccess }: AuthProps) {
                     type="button"
                     onClick={() => toast({
                       title: "Password Reset",
-                      description: "This is a demo app. Use any password for login."
+                      description: "Password reset functionality will be available soon."
                     })}
                   >
                     Forgot password?
@@ -118,7 +118,7 @@ export function Auth({ onSuccess }: AuthProps) {
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </TabsContent>
@@ -164,17 +164,15 @@ export function Auth({ onSuccess }: AuthProps) {
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700" disabled={loading}>
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
             </TabsContent>
           </form>
         </Tabs>
       </CardContent>
-      <CardFooter className="text-center text-sm text-muted-foreground">
-        <p className="w-full">
-          This is a demo app - any email and password will work.
-        </p>
+      <CardFooter className="text-center text-sm text-muted-foreground flex justify-center">
+        <p>Track, analyze, and optimize your QR codes with QRTrakr</p>
       </CardFooter>
     </Card>
   );

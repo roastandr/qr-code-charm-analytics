@@ -20,6 +20,8 @@ export interface QRCode {
   totalScans: number;
   isActive: boolean;
   expiresAt?: string;
+  slug?: string;
+  target_url?: string;
 }
 
 export interface ScanEvent {

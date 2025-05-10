@@ -1,8 +1,7 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,126 +10,179 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Menu, QrCode } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useAuth } from '@/hooks/use-auth';
+import { QrCode, User, LogOut, Menu, X } from 'lucide-react';
 
 export function Header() {
   const { user, logout } = useAuth();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="outline" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="pr-0 sm:max-w-xs">
-              <nav className="grid gap-6 py-6">
-                <Link 
-                  to="/" 
-                  className="flex items-center gap-2 font-semibold"
-                  onClick={() => setSheetOpen(false)}
-                >
-                  <QrCode className="h-6 w-6" />
-                  <span className="text-lg">QR Tracker</span>
-                </Link>
-                
-                <div className="grid gap-4">
-                  <h4 className="font-medium">Pages</h4>
-                  <div className="grid gap-2">
-                    <Link
-                      to="/"
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-colors hover:bg-accent"
-                      onClick={() => setSheetOpen(false)}
-                    >
-                      Home
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-colors hover:bg-accent"
-                      onClick={() => setSheetOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                  </div>
-                </div>
-              </nav>
-            </SheetContent>
-          </Sheet>
-          
-          <Link to="/" className="flex items-center gap-2">
-            <QrCode className="h-6 w-6" />
-            <span className="font-semibold text-lg hidden md:inline-block">QR Tracker</span>
+    <header className="border-b bg-background sticky top-0 z-40">
+      <div className="container max-w-6xl mx-auto px-4 flex h-16 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2">
+          <QrCode className="h-6 w-6" />
+          <span className="font-semibold text-xl bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">
+            QRTrakr
+          </span>
+        </Link>
+
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+
+        {/* Desktop navigation */}
+        <nav className="hidden md:flex items-center gap-6">
+          <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+            Home
           </Link>
-          
-          <nav className="hidden md:flex gap-6 ml-6">
-            <Link to="/" className="text-sm font-medium transition-colors hover:text-foreground/80">
-              Home
-            </Link>
-            <Link to="/dashboard" className="text-sm font-medium transition-colors hover:text-foreground/80">
+          {user && (
+            <Link to="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
               Dashboard
             </Link>
-          </nav>
-        </div>
-        
-        <div className="flex items-center gap-4">
+          )}
+          <Link to="/pricing" className="text-sm font-medium hover:text-primary transition-colors">
+            Pricing
+          </Link>
+          <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+            About
+          </Link>
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle />
+          
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(user.name || user.email)}
-                    </AvatarFallback>
-                  </Avatar>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <User className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end">
-                <DropdownMenuLabel>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    <p className="text-sm font-medium leading-none">{user.email}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/profile">Profile</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  Log out
+                <DropdownMenuItem onClick={handleLogout} className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                  Log Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="default">
-              <Link to="/login">Sign In</Link>
+            <Button asChild>
+              <Link to="/login">
+                Sign In
+              </Link>
             </Button>
           )}
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t p-4">
+          <nav className="flex flex-col space-y-4">
+            <Link
+              to="/"
+              className="text-sm font-medium hover:text-primary transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
+            {user && (
+              <Link
+                to="/dashboard"
+                className="text-sm font-medium hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+            )}
+            <Link
+              to="/pricing"
+              className="text-sm font-medium hover:text-primary transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Pricing
+            </Link>
+            <Link
+              to="/about"
+              className="text-sm font-medium hover:text-primary transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              About
+            </Link>
+            
+            <div className="py-2">
+              <ThemeToggle />
+            </div>
+            
+            {user ? (
+              <div className="flex flex-col space-y-2">
+                <div className="px-2 py-1 rounded-md bg-muted">
+                  <p className="text-sm">{user.email}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start px-2"
+                  asChild
+                >
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)}>
+                    Profile
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start px-2"
+                  onClick={async () => {
+                    await handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-2">
+                <Button
+                  className="w-full"
+                  asChild
+                >
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
