@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { qrService } from "@/services/qr-service";
 import QRCode from 'qrcode.react';
 import { Download } from 'lucide-react';
+import { nanoid } from 'nanoid';
 
 interface QRCodeGeneratorProps {
   onQRGenerated?: () => void;
@@ -26,6 +27,7 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [qrGenerated, setQrGenerated] = useState(false);
   const [activeTab, setActiveTab] = useState('generate');
+  const [redirectUrl, setRedirectUrl] = useState('');
 
   useEffect(() => {
     // Reset state when changing tabs
@@ -61,13 +63,23 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
     try {
       if (user) {
         // Save to service if user is logged in
-        await qrService.createQRCode(user.id, {
+        const slug = nanoid(8); // Generate a random slug
+        const newQRLink = await qrService.createQRLink({
           name: name || 'Untitled QR Code',
-          url,
+          target_url: url,
+          slug: slug,
           color: qrColor,
-          backgroundColor: bgColor,
-          size,
+          background_color: bgColor
         });
+        
+        // Generate the redirect URL
+        const baseUrl = window.location.origin;
+        const newRedirectUrl = `${baseUrl}/r/${newQRLink.slug}`;
+        setRedirectUrl(newRedirectUrl);
+      } else {
+        // For non-logged in users, just create a demo redirect URL
+        // This won't work but is just for visual representation
+        setRedirectUrl(`${window.location.origin}/r/demo-${nanoid(6)}`);
       }
       
       setQrGenerated(true);
@@ -247,7 +259,7 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
                   style={{ backgroundColor: bgColor }}
                 >
                   <QRCode 
-                    value={url} 
+                    value={redirectUrl || url} 
                     size={size} 
                     fgColor={qrColor} 
                     bgColor={bgColor} 
@@ -258,7 +270,12 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
                 
                 <div className="text-center">
                   <p className="font-medium">{name || 'Untitled QR Code'}</p>
-                  <p className="text-sm text-muted-foreground break-all mt-1">{url}</p>
+                  <div className="space-y-1 mt-2">
+                    <p className="text-sm font-medium">Redirect URL:</p>
+                    <p className="text-xs text-muted-foreground break-all mt-1 bg-muted p-2 rounded-md">{redirectUrl || url}</p>
+                    <p className="text-xs text-muted-foreground mt-2">Destination URL:</p>
+                    <p className="text-xs text-muted-foreground break-all mt-1">{url}</p>
+                  </div>
                 </div>
                 
                 <div className="flex gap-4 w-full">

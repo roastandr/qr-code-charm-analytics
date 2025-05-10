@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { QRCode, QRCodeStats as QRStats } from '@/types';
 import { qrService } from '@/services/qr-service';
@@ -6,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Smartphone, Monitor, Tablet, HelpCircle } from 'lucide-react';
+import { Smartphone, Monitor, Tablet, HelpCircle, MapPin, Globe } from 'lucide-react';
 
 interface QRCodeStatsProps {
   qrCode: QRCode;
@@ -111,8 +112,18 @@ export function QRCodeStats({ qrCode }: QRCodeStatsProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Top Location</CardDescription>
-            <CardTitle className="text-xl">
-              {stats.topLocations.length > 0 ? stats.topLocations[0].country : 'No data'}
+            <CardTitle className="text-xl flex items-center gap-2">
+              {stats.topLocations.length > 0 ? (
+                <>
+                  <Globe className="h-5 w-5 text-primary" />
+                  {stats.topLocations[0].country || 'Unknown'}
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  No data
+                </>
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -121,10 +132,15 @@ export function QRCodeStats({ qrCode }: QRCodeStatsProps) {
           <CardHeader className="pb-2">
             <CardDescription>Most Used Device</CardDescription>
             <CardTitle className="flex items-center gap-2">
-              {deviceData.length > 0 && (
+              {deviceData.length > 0 ? (
                 <>
                   {renderDeviceIcon(deviceData.sort((a, b) => b.value - a.value)[0].name.toLowerCase())}
                   <span>{deviceData.sort((a, b) => b.value - a.value)[0].name}</span>
+                </>
+              ) : (
+                <>
+                  <HelpCircle className="h-5 w-5 text-muted-foreground" /> 
+                  No data
                 </>
               )}
             </CardTitle>
@@ -190,25 +206,32 @@ export function QRCodeStats({ qrCode }: QRCodeStatsProps) {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="h-[300px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={deviceData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {deviceData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} scans`, 'Scans']} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {deviceData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={deviceData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {deviceData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} scans`, 'Scans']} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <HelpCircle className="h-12 w-12 mb-2" />
+                      <p>No device data available</p>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-4">
@@ -247,31 +270,40 @@ export function QRCodeStats({ qrCode }: QRCodeStatsProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={stats.topLocations}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    layout="vertical"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis 
-                      dataKey="country" 
-                      type="category"
-                      width={100}
-                    />
-                    <Tooltip 
-                      formatter={(value) => [`${value} scans`, 'Scans']}
-                    />
-                    <Bar dataKey="count" fill="#8B5CF6" radius={[0, 4, 4, 0]}>
-                      {stats.topLocations.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {stats.topLocations.length > 0 ? (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={stats.topLocations}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis 
+                        dataKey="country" 
+                        type="category"
+                        width={100}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [`${value} scans`, 'Scans']}
+                      />
+                      <Bar dataKey="count" fill="#8B5CF6" radius={[0, 4, 4, 0]}>
+                        {stats.topLocations.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <MapPin className="h-12 w-12 mb-2" />
+                    <p>No location data available yet</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

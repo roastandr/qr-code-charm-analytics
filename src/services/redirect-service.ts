@@ -36,15 +36,33 @@ export const redirectService = {
       const browserInfo = detectBrowserInfo();
       const osInfo = detectOSInfo();
       
-      // Record the scan
-      await supabase
-        .rpc('record_scan', {
-          qr_link_id_param: link.id,
-          device_type_param: deviceType,
-          browser_param: browserInfo,
-          os_param: osInfo,
-          referrer_param: document.referrer || null
-        });
+      // Get location info from IP (using a session storage check to prevent duplicate tracking)
+      const scanKey = `scan_${shortCode}_${new Date().toDateString()}`;
+      const recentlySeen = sessionStorage.getItem(scanKey);
+      
+      if (!recentlySeen) {
+        // Record the scan only if not recently seen
+        try {
+          await supabase.rpc('record_scan', {
+            qr_link_id_param: link.id,
+            device_type_param: deviceType,
+            browser_param: browserInfo,
+            os_param: osInfo,
+            referrer_param: document.referrer || null,
+            // We'll add empty location data for now - ideally would use a geolocation service
+            country_param: null,
+            city_param: null,
+            latitude_param: null,
+            longitude_param: null
+          });
+          
+          // Set the session storage to prevent duplicate tracking for this session
+          sessionStorage.setItem(scanKey, 'true');
+        } catch (error) {
+          console.error('Error recording scan:', error);
+          // Continue with redirect even if tracking fails
+        }
+      }
       
       // Get the name for display purposes
       const { data: qrDetails } = await supabase

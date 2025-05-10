@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -8,7 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { qrService } from '@/services/qr-service';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const formSchema = z.object({
@@ -29,6 +30,7 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [redirectUrl, setRedirectUrl] = useState('');
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -43,16 +45,29 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
   
   const { watch } = form;
   const targetUrl = watch('target_url');
+  const slug = watch('slug');
   const color = watch('color');
   const backgroundColor = watch('background_color');
   
-  // Generate preview QR code
+  // Generate preview QR code with the redirect URL
   React.useEffect(() => {
     if (targetUrl.startsWith('http')) {
-      // For preview purposes, just show the original URL
-      setPreviewUrl(targetUrl);
+      // Generate preview redirect URL
+      const baseUrl = window.location.origin;
+      const previewSlug = slug || 'preview-slug';
+      const previewRedirectUrl = `${baseUrl}/r/${previewSlug}`;
+      setRedirectUrl(previewRedirectUrl);
+      setPreviewUrl(previewRedirectUrl);
     }
-  }, [targetUrl]);
+  }, [targetUrl, slug]);
+  
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(redirectUrl);
+    toast({
+      title: "Copied!",
+      description: "Redirect URL copied to clipboard",
+    });
+  };
   
   const onSubmit = async (values: FormValues) => {
     setIsCreating(true);
@@ -226,15 +241,36 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
               <p className="text-sm text-muted-foreground">Your QR code will look like this</p>
             </div>
             {previewUrl ? (
-              <div className="p-4 bg-white border rounded-lg shadow-sm">
-                <QRCodeSVG 
-                  value={previewUrl}
-                  size={200}
-                  fgColor={color}
-                  bgColor={backgroundColor}
-                  level="M"
-                  includeMargin={true}
-                />
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-4 bg-white border rounded-lg shadow-sm">
+                  <QRCodeSVG 
+                    value={previewUrl}
+                    size={200}
+                    fgColor={color}
+                    bgColor={backgroundColor}
+                    level="M"
+                    includeMargin={true}
+                  />
+                </div>
+                
+                {redirectUrl && (
+                  <div className="w-full">
+                    <div className="text-center text-sm mb-1">Redirect URL</div>
+                    <div className="flex items-center gap-1">
+                      <div className="bg-muted p-2 rounded text-xs font-mono flex-1 overflow-hidden text-ellipsis">
+                        {redirectUrl}
+                      </div>
+                      <Button variant="outline" size="sm" onClick={copyToClipboard} className="flex-shrink-0">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" 
+                        onClick={() => window.open(redirectUrl, '_blank')}
+                        className="flex-shrink-0">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-48 w-48 bg-muted rounded-lg">
