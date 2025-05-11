@@ -18,7 +18,7 @@ const transformDbRowToQRCode = (row: any): QRCode => {
     backgroundColor: row.background_color,
     isActive: row.is_active,
     expiresAt: row.expires_at,
-    totalScans: row.total_scans || 0, // Include scan count if available
+    totalScans: row.total_scans || 0, // Ensure this is a number
     // Keep all original fields too for compatibility
     user_id: row.user_id,
     created_at: row.created_at,
@@ -53,7 +53,7 @@ export const qrService = {
     
     // Process the result to convert the scan counts format
     return (data || []).map(item => {
-      // Extract scan count from the nested count array
+      // Extract scan count from the nested count array - ensure it's a number
       const totalScans = item.total_scans.length > 0 ? parseInt(item.total_scans[0].count) : 0;
       
       // Convert to QRCode format, adding the scan count
@@ -80,7 +80,7 @@ export const qrService = {
       throw error;
     }
     
-    // Extract scan count and add to the QR code object
+    // Extract scan count and add to the QR code object - ensure it's a number
     const totalScans = data.total_scans.length > 0 ? parseInt(data.total_scans[0].count) : 0;
     const qrCode = transformDbRowToQRCode(data);
     qrCode.totalScans = totalScans;
