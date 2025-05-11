@@ -25,21 +25,55 @@ export function Dashboard() {
   const [selectedQrLink, setSelectedQrLink] = useState<QRCode | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('my-codes');
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
   
   const loadQRLinks = async () => {
+    if (deleteInProgress) return; // Don't reload while deletion is in progress
+    
     setLoading(true);
     try {
       const data = await qrService.getQRLinks();
-      setQrLinks(data);
+      
+      // Ensure we have scan counts for all QR links
+      const linksWithTotalScans = await Promise.all(
+        data.map(async (link) => {
+          try {
+            const stats = await qrService.getQRCodeStats(link.id);
+            return {
+              ...link,
+              totalScans: stats.totalScans
+            };
+          } catch (error) {
+            console.error('Error loading stats for QR link:', error);
+            return link;
+          }
+        })
+      );
+      
+      setQrLinks(linksWithTotalScans);
+      
       // If there are QR codes and none is selected, select the first one
-      if (data.length > 0 && !selectedQrLink) {
-        setSelectedQrLink(data[0]);
-      } else if (data.length === 0) {
+      if (linksWithTotalScans.length > 0 && !selectedQrLink) {
+        setSelectedQrLink(linksWithTotalScans[0]);
+      } else if (linksWithTotalScans.length === 0) {
         // If no QR codes exist, clear the selected QR
         setSelectedQrLink(null);
         // If we were on stats tab but no QR is selected, go to my-codes tab
         if (activeTab === 'stats') {
           setActiveTab('my-codes');
+        }
+      } else if (selectedQrLink) {
+        // Update the selected QR link with fresh data if it still exists
+        const updatedSelectedQR = linksWithTotalScans.find(link => link.id === selectedQrLink.id);
+        if (updatedSelectedQR) {
+          setSelectedQrLink(updatedSelectedQR);
+        } else {
+          // If previously selected QR was deleted, select the first QR
+          setSelectedQrLink(linksWithTotalScans.length > 0 ? linksWithTotalScans[0] : null);
+          // If stats tab was active but QR was deleted, switch to my-codes tab
+          if (activeTab === 'stats') {
+            setActiveTab('my-codes');
+          }
         }
       }
     } catch (error) {
@@ -66,25 +100,47 @@ export function Dashboard() {
     setActiveTab('my-codes');
   };
   
-  const handleQRLinkDeleted = (id: string) => {
-    // First check if the deleted QR was the selected one
-    const wasSelected = selectedQrLink && selectedQrLink.id === id;
-    
-    // Remove the deleted QR from the list
-    const updatedLinks = qrLinks.filter(qr => qr.id !== id);
-    setQrLinks(updatedLinks);
-    
-    // If the deleted QR was selected, select another one or clear selection
-    if (wasSelected) {
-      if (updatedLinks.length > 0) {
-        setSelectedQrLink(updatedLinks[0]);
-      } else {
-        setSelectedQrLink(null);
-        // If we were on stats tab but no QR is selected, go to my-codes tab
-        if (activeTab === 'stats') {
-          setActiveTab('my-codes');
+  const handleQRLinkDeleted = async (id: string) => {
+    try {
+      setDeleteInProgress(true);
+      
+      // First check if the deleted QR was the selected one
+      const wasSelected = selectedQrLink && selectedQrLink.id === id;
+      
+      // Remove the deleted QR from the list immediately for UI feedback
+      const updatedLinks = qrLinks.filter(qr => qr.id !== id);
+      setQrLinks(updatedLinks);
+      
+      // If the deleted QR was selected, select another one or clear selection
+      if (wasSelected) {
+        if (updatedLinks.length > 0) {
+          setSelectedQrLink(updatedLinks[0]);
+        } else {
+          setSelectedQrLink(null);
+          // If we were on stats tab but no QR is selected, go to my-codes tab
+          if (activeTab === 'stats') {
+            setActiveTab('my-codes');
+          }
         }
       }
+      
+      // Show success message
+      toast({
+        title: "QR Code Deleted",
+        description: "The QR code has been successfully deleted.",
+      });
+      
+      // Reload QR links to ensure everything is in sync
+      await loadQRLinks();
+    } catch (error) {
+      console.error('Error during QR deletion cleanup:', error);
+      toast({
+        title: "Error During Cleanup",
+        description: "There was an issue refreshing data after deletion.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteInProgress(false);
     }
   };
   

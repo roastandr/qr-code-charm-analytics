@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { QRCode, QRCodeStats, ScanEvent } from '@/types';
 import { nanoid } from 'nanoid';
@@ -19,7 +18,7 @@ const transformDbRowToQRCode = (row: any): QRCode => {
     backgroundColor: row.background_color,
     isActive: row.is_active,
     expiresAt: row.expires_at,
-    totalScans: 0, // Will be populated separately if needed
+    totalScans: row.total_scans || 0, // Include scan count if available
     // Keep all original fields too for compatibility
     user_id: row.user_id,
     created_at: row.created_at,
@@ -38,9 +37,13 @@ export const qrService = {
       throw new Error('Not authenticated');
     }
     
+    // Query to get QR links with their total scan counts
     const { data, error } = await supabase
       .from('qr_links')
-      .select('*')
+      .select(`
+        *,
+        total_scans:scans(count)
+      `)
       .order('created_at', { ascending: false });
       
     if (error) {
@@ -48,14 +51,27 @@ export const qrService = {
       throw error;
     }
     
-    return (data || []).map(transformDbRowToQRCode);
+    // Process the result to convert the scan counts format
+    return (data || []).map(item => {
+      // Extract scan count from the nested count array
+      const totalScans = item.total_scans.length > 0 ? parseInt(item.total_scans[0].count) : 0;
+      
+      // Convert to QRCode format, adding the scan count
+      const qrCode = transformDbRowToQRCode(item);
+      qrCode.totalScans = totalScans;
+      
+      return qrCode;
+    });
   },
   
   // Get a single QR link by ID
   getQRLink: async (id: string): Promise<QRCode> => {
     const { data, error } = await supabase
       .from('qr_links')
-      .select('*')
+      .select(`
+        *,
+        total_scans:scans(count)
+      `)
       .eq('id', id)
       .single();
       
@@ -64,7 +80,12 @@ export const qrService = {
       throw error;
     }
     
-    return transformDbRowToQRCode(data);
+    // Extract scan count and add to the QR code object
+    const totalScans = data.total_scans.length > 0 ? parseInt(data.total_scans[0].count) : 0;
+    const qrCode = transformDbRowToQRCode(data);
+    qrCode.totalScans = totalScans;
+    
+    return qrCode;
   },
   
   // Create a new QR link
@@ -246,5 +267,24 @@ export const qrService = {
         }
       )
       .subscribe();
+  },
+  
+  // Get the correct redirect URL based on the current domain
+  getRedirectUrl: (slug: string): string => {
+    // Get the current hostname (domain)
+    const hostname = window.location.hostname;
+    
+    // Create redirect URL based on whether we're on a custom domain or the lovable domain
+    let redirectUrl;
+    
+    if (hostname === 'localhost' || hostname.includes('lovable.app') || hostname.includes('lovable.dev')) {
+      // We're on local development or the lovable domain
+      redirectUrl = `${window.location.origin}/r/${slug}`;
+    } else {
+      // We're on a custom domain, use the same domain for the redirect
+      redirectUrl = `${window.location.origin}/r/${slug}`;
+    }
+    
+    return redirectUrl;
   }
 };

@@ -9,10 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import QRCodeCanvas from 'qrcode.react';
 import { useState } from 'react';
-import { Download, MoreVertical, QrCode, Trash2, ExternalLink } from 'lucide-react';
+import { Download, MoreVertical, ExternalLink, Trash2 } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import { qrService } from '@/services/qr-service';
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +45,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
       setIsDeleting(true);
       try {
         await qrService.deleteQRLink(qrToDelete);
+        // Call onDelete after successful deletion
         onDelete(qrToDelete);
         toast({
           title: "QR Code Deleted",
@@ -70,8 +71,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
   };
   
   const getRedirectUrl = (qrCode: QRCode): string => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/r/${qrCode.slug || qrCode.shortUrl}`;
+    return qrService.getRedirectUrl(qrCode.slug || qrCode.shortUrl);
   };
   
   const downloadQRCode = (qrCode: QRCode, format: 'svg' | 'png') => {
@@ -219,7 +219,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center">
                     <div className="text-sm text-muted-foreground">
-                      {qrCode.totalScans} scans · Created {formatDistanceToNow(new Date(qrCode.createdAt || qrCode.created_at || ''))} ago
+                      <span className="font-medium">{qrCode.totalScans || 0} scans</span> · Created {formatDistanceToNow(new Date(qrCode.createdAt || qrCode.created_at || ''))} ago
                     </div>
                   </div>
                   
@@ -307,7 +307,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !open && setDeleteConfirmOpen(false)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>

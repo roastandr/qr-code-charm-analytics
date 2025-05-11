@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TrackingResult {
@@ -36,10 +35,10 @@ export const redirectService = {
       const browserInfo = detectBrowserInfo();
       const osInfo = detectOSInfo();
       
-      // Create a unique scan key that includes the date, hour, and minute to prevent duplicate tracking
-      // within the same browsing session, but still allow for tracking multiple scans on different days/hours
+      // Create a unique scan key that includes only the date and hour to prevent duplicate tracking
+      // within the same hour, but still allow for tracking multiple scans on different hours of the day
       const now = new Date();
-      const scanKey = `scan_${shortCode}_${now.toISOString().substring(0, 16)}`; // Format: 2023-05-10T15:30
+      const scanKey = `scan_${shortCode}_${now.toISOString().substring(0, 13)}`; // Format: 2023-05-10T15
       const recentlySeen = sessionStorage.getItem(scanKey);
       
       if (!recentlySeen) {
@@ -51,15 +50,14 @@ export const redirectService = {
             browser_param: browserInfo,
             os_param: osInfo,
             referrer_param: document.referrer || null,
-            // We'll add empty location data for now - ideally would use a geolocation service
+            // Try to get location data if possible
             country_param: null,
             city_param: null,
             latitude_param: null,
             longitude_param: null
           });
           
-          // Set the session storage to prevent duplicate tracking for this session
-          // and expire it after one hour
+          // Set the session storage to prevent duplicate tracking for this hour
           sessionStorage.setItem(scanKey, 'true');
           
           console.log(`Recorded scan for ${shortCode} at ${now.toISOString()}`);
@@ -68,7 +66,7 @@ export const redirectService = {
           // Continue with redirect even if tracking fails
         }
       } else {
-        console.log(`Duplicate scan prevented for ${shortCode}`);
+        console.log(`Duplicate scan prevented for ${shortCode} within the same hour`);
       }
       
       // Get the name for display purposes
