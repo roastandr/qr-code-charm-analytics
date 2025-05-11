@@ -72,7 +72,7 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
           background_color: bgColor
         });
         
-        // Generate the redirect URL
+        // Generate the redirect URL - this is what we want in the QR code
         const baseUrl = window.location.origin;
         const newRedirectUrl = `${baseUrl}/r/${newQRLink.slug}`;
         setRedirectUrl(newRedirectUrl);

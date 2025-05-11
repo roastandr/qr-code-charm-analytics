@@ -36,8 +36,10 @@ export const redirectService = {
       const browserInfo = detectBrowserInfo();
       const osInfo = detectOSInfo();
       
-      // Get location info from IP (using a session storage check to prevent duplicate tracking)
-      const scanKey = `scan_${shortCode}_${new Date().toDateString()}`;
+      // Create a unique scan key that includes the hour to prevent duplicate tracking
+      // but still allows for tracking multiple scans on the same day
+      const now = new Date();
+      const scanKey = `scan_${shortCode}_${now.toDateString()}_${now.getHours()}`;
       const recentlySeen = sessionStorage.getItem(scanKey);
       
       if (!recentlySeen) {

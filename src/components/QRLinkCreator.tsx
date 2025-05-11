@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { qrService } from '@/services/qr-service';
 import { Loader2, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { nanoid } from 'nanoid';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -54,10 +55,10 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
     if (targetUrl.startsWith('http')) {
       // Generate preview redirect URL
       const baseUrl = window.location.origin;
-      const previewSlug = slug || 'preview-slug';
+      const previewSlug = slug || nanoid(8); // Use a random slug if not provided
       const previewRedirectUrl = `${baseUrl}/r/${previewSlug}`;
       setRedirectUrl(previewRedirectUrl);
-      setPreviewUrl(previewRedirectUrl);
+      setPreviewUrl(previewRedirectUrl); // Use redirect URL for QR code
     }
   }, [targetUrl, slug]);
   
@@ -72,10 +73,13 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
   const onSubmit = async (values: FormValues) => {
     setIsCreating(true);
     try {
+      // Generate random slug if not provided
+      const finalSlug = values.slug || nanoid(8);
+      
       const newQRLink = await qrService.createQRLink({
         name: values.name,
         target_url: values.target_url,
-        slug: values.slug || undefined,
+        slug: finalSlug,
         color: values.color,
         background_color: values.background_color
       });
