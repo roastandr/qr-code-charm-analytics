@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,14 +71,14 @@ export function QRCodeGenerator({ onQRGenerated }: QRCodeGeneratorProps) {
           background_color: bgColor
         });
         
-        // Generate the redirect URL - this is what we want in the QR code
-        const baseUrl = window.location.origin;
-        const newRedirectUrl = `${baseUrl}/r/${newQRLink.slug}`;
+        // Generate the redirect URL using the service to ensure consistency
+        // This will work correctly on any domain, including custom domains
+        const newRedirectUrl = qrService.getRedirectUrl(newQRLink.slug);
         setRedirectUrl(newRedirectUrl);
       } else {
         // For non-logged in users, just create a demo redirect URL
-        // This won't work but is just for visual representation
-        setRedirectUrl(`${window.location.origin}/r/demo-${nanoid(6)}`);
+        const demoSlug = `demo-${nanoid(6)}`;
+        setRedirectUrl(qrService.getRedirectUrl(demoSlug));
       }
       
       setQrGenerated(true);

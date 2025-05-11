@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { QRCode, QRCodeStats, ScanEvent } from '@/types';
 import { nanoid } from 'nanoid';
@@ -275,16 +274,12 @@ export const qrService = {
     // Get the current hostname (domain)
     const hostname = window.location.hostname;
     
-    // Create redirect URL based on whether we're on a custom domain or the lovable domain
-    let redirectUrl;
+    // Create redirect URL using the current origin
+    // This ensures it works with any domain (including custom domains)
+    const redirectUrl = `${window.location.origin}/r/${slug}`;
     
-    if (hostname === 'localhost' || hostname.includes('lovable.app') || hostname.includes('lovable.dev')) {
-      // We're on local development or the lovable domain
-      redirectUrl = `${window.location.origin}/r/${slug}`;
-    } else {
-      // We're on a custom domain, use the same domain for the redirect
-      redirectUrl = `${window.location.origin}/r/${slug}`;
-    }
+    // Log for debugging purposes
+    console.log(`Generated redirect URL: ${redirectUrl} for hostname: ${hostname}`);
     
     return redirectUrl;
   }

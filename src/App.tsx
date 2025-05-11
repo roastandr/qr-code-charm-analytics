@@ -38,6 +38,9 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  // Add console log to help with debugging
+  console.log("App initializing with current URL:", window.location.href);
+  
   return (
     <React.StrictMode>
       <RouterProvider router={router} />

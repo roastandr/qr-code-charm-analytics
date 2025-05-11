@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TrackingResult {
@@ -11,16 +12,24 @@ export const redirectService = {
   // Track a scan when QR code is accessed via short URL
   trackAndRedirect: async (shortCode: string): Promise<TrackingResult> => {
     try {
+      console.log(`Processing redirect for code: ${shortCode}`);
+      
       // First, get the QR link from the slug
       const { data: qrLink, error: qrError } = await supabase
         .rpc('get_qr_link_by_slug', { slug_param: shortCode });
       
-      if (qrError || !qrLink || qrLink.length === 0) {
+      if (qrError) {
         console.error('QR code lookup error:', qrError);
         return { success: false, error: 'QR code not found' };
       }
       
+      if (!qrLink || qrLink.length === 0) {
+        console.error('QR code not found for slug:', shortCode);
+        return { success: false, error: 'QR code not found' };
+      }
+      
       const link = qrLink[0];
+      console.log('Found QR link:', link);
       
       if (!link.is_active) {
         return { success: false, error: 'QR code is inactive' };
