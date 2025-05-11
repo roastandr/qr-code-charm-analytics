@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { QRCode, QRCodeStats, ScanEvent } from '@/types';
 import { nanoid } from 'nanoid';
@@ -73,8 +74,8 @@ export const qrService = {
       throw new Error('Not authenticated');
     }
     
-    // Generate a random slug if not provided
-    const slug = qrData.slug || nanoid(8);
+    // Generate a random slug if not provided or empty
+    const slug = qrData.slug && qrData.slug.trim() !== '' ? qrData.slug : nanoid(8);
     
     const { data, error } = await supabase
       .from('qr_links')

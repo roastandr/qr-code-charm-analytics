@@ -16,7 +16,7 @@ import { nanoid } from 'nanoid';
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   target_url: z.string().url('Please enter a valid URL'),
-  slug: z.string().min(3, 'Slug must be at least 3 characters').optional(),
+  slug: z.string().min(3, 'If provided, slug must be at least 3 characters').optional().or(z.literal('')),
   color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Please enter a valid hex color'),
   background_color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Please enter a valid hex color')
 });
@@ -73,8 +73,8 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
   const onSubmit = async (values: FormValues) => {
     setIsCreating(true);
     try {
-      // Generate random slug if not provided
-      const finalSlug = values.slug || nanoid(8);
+      // Generate random slug if not provided or empty
+      const finalSlug = values.slug && values.slug.trim() !== '' ? values.slug : nanoid(8);
       
       const newQRLink = await qrService.createQRLink({
         name: values.name,
@@ -175,7 +175,7 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
                         <Input placeholder="my-custom-link" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Customize your short link (e.g., yourdomain.com/r/<span className="font-mono">my-custom-link</span>)
+                        Customize your short link (e.g., yourdomain.com/r/<span className="font-mono">my-custom-link</span>) or leave empty for auto-generated
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -259,7 +259,7 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
                 
                 {redirectUrl && (
                   <div className="w-full">
-                    <div className="text-center text-sm mb-1">Redirect URL</div>
+                    <div className="text-center text-sm mb-1">Redirect URL (in QR code)</div>
                     <div className="flex items-center gap-1">
                       <div className="bg-muted p-2 rounded text-xs font-mono flex-1 overflow-hidden text-ellipsis">
                         {redirectUrl}
@@ -272,6 +272,11 @@ export function QRLinkCreator({ onSuccess }: QRLinkCreatorProps) {
                         className="flex-shrink-0">
                         <ExternalLink className="h-4 w-4" />
                       </Button>
+                    </div>
+                    
+                    <div className="text-center text-sm mt-3 mb-1">Target URL (destination)</div>
+                    <div className="bg-muted/50 p-2 rounded text-xs font-mono break-all">
+                      {targetUrl}
                     </div>
                   </div>
                 )}

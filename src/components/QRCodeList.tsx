@@ -14,6 +14,8 @@ import QRCodeCanvas from 'qrcode.react';
 import { useState } from 'react';
 import { Download, MoreVertical, QrCode, Trash2, ExternalLink } from 'lucide-react';
 import ReactDOM from 'react-dom';
+import { qrService } from '@/services/qr-service';
+import { useToast } from "@/hooks/use-toast";
 
 interface QRCodeListProps {
   qrCodes: QRCode[];
@@ -26,6 +28,8 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
   const [qrToPreview, setQrToPreview] = useState<QRCode | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [qrToDelete, setQrToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
   
   const handlePreview = (qrCode: QRCode) => {
     setQrToPreview(qrCode);
@@ -36,12 +40,38 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
     setDeleteConfirmOpen(true);
   };
   
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (qrToDelete) {
-      onDelete(qrToDelete);
-      setDeleteConfirmOpen(false);
-      setQrToDelete(null);
+      setIsDeleting(true);
+      try {
+        await qrService.deleteQRLink(qrToDelete);
+        onDelete(qrToDelete);
+        toast({
+          title: "QR Code Deleted",
+          description: "The QR code has been successfully deleted.",
+        });
+      } catch (error) {
+        console.error('Error deleting QR code:', error);
+        toast({
+          title: "Error",
+          description: "There was an error deleting the QR code.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsDeleting(false);
+        setDeleteConfirmOpen(false);
+        setQrToDelete(null);
+        // Clear preview if deleted QR was being previewed
+        if (qrToPreview && qrToPreview.id === qrToDelete) {
+          setQrToPreview(null);
+        }
+      }
     }
+  };
+  
+  const getRedirectUrl = (qrCode: QRCode): string => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/r/${qrCode.slug || qrCode.shortUrl}`;
   };
   
   const downloadQRCode = (qrCode: QRCode, format: 'svg' | 'png') => {
@@ -51,14 +81,15 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
     tempContainer.style.left = '-9999px';
     document.body.appendChild(tempContainer);
     
-    // Render the QR code
+    // Render the QR code with redirect URL, not original URL
+    const redirectUrl = getRedirectUrl(qrCode);
     const qrElement = document.createElement('div');
     tempContainer.appendChild(qrElement);
     
     // Use ReactDOM to render the QR code
     ReactDOM.render(
       <QRCodeCanvas
-        value={qrCode.url || qrCode.target_url || ''}
+        value={redirectUrl}
         size={qrCode.size || 300}
         fgColor={qrCode.color || '#000000'}
         bgColor={qrCode.backgroundColor || qrCode.background_color || '#FFFFFF'}
@@ -130,7 +161,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
               {/* QR Code Preview */}
               <div className="w-full sm:w-[140px] h-[140px] p-4 flex items-center justify-center bg-secondary/30">
                 <QRCodeCanvas 
-                  value={qrCode.url || qrCode.target_url || ''} 
+                  value={getRedirectUrl(qrCode)} 
                   size={100} 
                   fgColor={qrCode.color || '#000000'}
                   bgColor={qrCode.backgroundColor || qrCode.background_color || '#FFFFFF'}
@@ -157,7 +188,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
                           Preview QR Code
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => window.open(qrCode.url || qrCode.target_url || '', '_blank')}>
-                          Open URL
+                          Open Target URL
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => downloadQRCode(qrCode, 'png')}>
                           Download PNG
@@ -175,8 +206,13 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
                     </DropdownMenu>
                   </div>
                   
-                  <p className="text-sm text-muted-foreground mt-1 break-all">
-                    {qrCode.url || qrCode.target_url}
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <span className="font-medium">Redirect URL: </span>
+                    <span className="break-all">{getRedirectUrl(qrCode)}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <span className="font-medium">Target URL: </span>
+                    <span className="break-all">{qrCode.url || qrCode.target_url}</span>
                   </p>
                 </div>
                 
@@ -216,7 +252,7 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
             <div className="flex flex-col items-center justify-center py-4">
               <div className="p-4 border rounded-lg" style={{ backgroundColor: qrToPreview.backgroundColor || '#FFFFFF' }}>
                 <QRCodeCanvas 
-                  value={qrToPreview.url} 
+                  value={getRedirectUrl(qrToPreview)} 
                   size={qrToPreview.size || 300} 
                   fgColor={qrToPreview.color || '#000000'}
                   bgColor={qrToPreview.backgroundColor || '#FFFFFF'}
@@ -225,9 +261,16 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
                 />
               </div>
               
-              <p className="mt-4 text-sm text-center text-muted-foreground break-all">
-                {qrToPreview.url}
-              </p>
+              <div className="mt-4 text-sm text-center space-y-2">
+                <p className="font-medium">Redirect URL (in QR code):</p>
+                <p className="text-muted-foreground break-all">
+                  {getRedirectUrl(qrToPreview)}
+                </p>
+                <p className="font-medium mt-2">Target URL (destination):</p>
+                <p className="text-muted-foreground break-all">
+                  {qrToPreview.url || qrToPreview.target_url}
+                </p>
+              </div>
             </div>
           )}
           
@@ -235,12 +278,12 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
             <Button
               variant="outline"
               onClick={() => {
-                if (qrToPreview) window.open(qrToPreview.url, '_blank');
+                if (qrToPreview) window.open(qrToPreview.url || qrToPreview.target_url || '', '_blank');
               }}
               className="flex-1 sm:flex-none gap-2"
             >
               <ExternalLink className="h-4 w-4" />
-              Open URL
+              Open Target URL
             </Button>
             <div className="flex gap-2 flex-1 sm:flex-none">
               <Button
@@ -273,11 +316,19 @@ export function QRCodeList({ qrCodes, onSelect, onDelete, selectedId }: QRCodeLi
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
-              Delete
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

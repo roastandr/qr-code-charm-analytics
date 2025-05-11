@@ -36,14 +36,14 @@ export const redirectService = {
       const browserInfo = detectBrowserInfo();
       const osInfo = detectOSInfo();
       
-      // Create a unique scan key that includes the hour to prevent duplicate tracking
-      // but still allows for tracking multiple scans on the same day
+      // Create a unique scan key that includes the date, hour, and minute to prevent duplicate tracking
+      // within the same browsing session, but still allow for tracking multiple scans on different days/hours
       const now = new Date();
-      const scanKey = `scan_${shortCode}_${now.toDateString()}_${now.getHours()}`;
+      const scanKey = `scan_${shortCode}_${now.toISOString().substring(0, 16)}`; // Format: 2023-05-10T15:30
       const recentlySeen = sessionStorage.getItem(scanKey);
       
       if (!recentlySeen) {
-        // Record the scan only if not recently seen
+        // Record the scan only if not recently seen in this session
         try {
           await supabase.rpc('record_scan', {
             qr_link_id_param: link.id,
@@ -59,11 +59,16 @@ export const redirectService = {
           });
           
           // Set the session storage to prevent duplicate tracking for this session
+          // and expire it after one hour
           sessionStorage.setItem(scanKey, 'true');
+          
+          console.log(`Recorded scan for ${shortCode} at ${now.toISOString()}`);
         } catch (error) {
           console.error('Error recording scan:', error);
           // Continue with redirect even if tracking fails
         }
+      } else {
+        console.log(`Duplicate scan prevented for ${shortCode}`);
       }
       
       // Get the name for display purposes

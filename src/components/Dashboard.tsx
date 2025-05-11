@@ -34,6 +34,13 @@ export function Dashboard() {
       // If there are QR codes and none is selected, select the first one
       if (data.length > 0 && !selectedQrLink) {
         setSelectedQrLink(data[0]);
+      } else if (data.length === 0) {
+        // If no QR codes exist, clear the selected QR
+        setSelectedQrLink(null);
+        // If we were on stats tab but no QR is selected, go to my-codes tab
+        if (activeTab === 'stats') {
+          setActiveTab('my-codes');
+        }
       }
     } catch (error) {
       console.error('Error loading QR links:', error);
@@ -60,9 +67,24 @@ export function Dashboard() {
   };
   
   const handleQRLinkDeleted = (id: string) => {
-    setQrLinks(prev => prev.filter(qr => qr.id !== id));
-    if (selectedQrLink && selectedQrLink.id === id) {
-      setSelectedQrLink(qrLinks.length > 1 ? qrLinks.find(qr => qr.id !== id) || null : null);
+    // First check if the deleted QR was the selected one
+    const wasSelected = selectedQrLink && selectedQrLink.id === id;
+    
+    // Remove the deleted QR from the list
+    const updatedLinks = qrLinks.filter(qr => qr.id !== id);
+    setQrLinks(updatedLinks);
+    
+    // If the deleted QR was selected, select another one or clear selection
+    if (wasSelected) {
+      if (updatedLinks.length > 0) {
+        setSelectedQrLink(updatedLinks[0]);
+      } else {
+        setSelectedQrLink(null);
+        // If we were on stats tab but no QR is selected, go to my-codes tab
+        if (activeTab === 'stats') {
+          setActiveTab('my-codes');
+        }
+      }
     }
   };
   
